@@ -1,0 +1,31 @@
+name: Pull local clone
+
+on:
+  workflow_run:
+    workflows: ["Sync fork with upstream"]
+    types: [completed]
+
+jobs:
+  pull:
+    if: >-
+      vars.MAC_RUNNER == 'true' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: [self-hosted, macOS]
+    steps:
+      - name: Sync local Hermes clones to fork main
+        shell: bash
+        run: |
+          set -euo pipefail
+          sync_repo() {
+            local dir="$1"
+            if [[ ! -d "$dir/.git" ]]; then
+              echo "Skip $dir (not a git repo)"
+              return 0
+            fi
+            echo "Syncing $dir"
+            git -C "$dir" fetch origin main
+            git -C "$dir" reset --hard origin/main
+            git -C "$dir" log -1 --oneline
+          }
+          sync_repo "$HOME/hermes-agent"
+          sync_repo "$HOME/.hermes/hermes-agent"
